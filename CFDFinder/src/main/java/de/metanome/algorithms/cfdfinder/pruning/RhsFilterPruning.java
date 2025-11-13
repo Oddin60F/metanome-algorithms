@@ -1,10 +1,10 @@
 package de.metanome.algorithms.cfdfinder.pruning;
 
+import java.util.Collection;
+
 import de.metanome.algorithms.cfdfinder.pattern.PatternTableau;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-
-import java.util.Collection;
 
 public class RhsFilterPruning extends SupportIndependentPruning {
 
@@ -21,10 +21,12 @@ public class RhsFilterPruning extends SupportIndependentPruning {
         this.possibleRhs = new IntAVLTreeSet(possibleRhs);
     }
 
-    public RhsFilterPruning(int patternThreshold, double minSupportGain, double maxLevelSupportDrop, int possibleRhs, double minCOnfidence) {
+    public RhsFilterPruning(int patternThreshold, double minSupportGain, double maxLevelSupportDrop, Integer[] possibleRhs, double minCOnfidence) {
         super(patternThreshold, minSupportGain, maxLevelSupportDrop, minCOnfidence);
         this.possibleRhs = new IntAVLTreeSet();
-        this.possibleRhs.add(possibleRhs);
+        for (Integer value : possibleRhs) {
+            this.possibleRhs.add(value);
+        }
     }
 
     public RhsFilterPruning(int patternThreshold, double minSupportGain, double maxLevelSupportDrop, Collection<Integer> possibleRhs, double minConfidence) {

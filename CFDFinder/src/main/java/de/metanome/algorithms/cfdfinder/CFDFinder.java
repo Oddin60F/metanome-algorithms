@@ -26,6 +26,7 @@ import de.metanome.algorithm_integration.algorithm_types.IntegerParameterAlgorit
 import de.metanome.algorithm_integration.algorithm_types.RelationalInputParameterAlgorithm;
 import de.metanome.algorithm_integration.algorithm_types.StringParameterAlgorithm;
 import de.metanome.algorithm_integration.configuration.ConfigurationRequirement;
+import de.metanome.algorithm_integration.configuration.ConfigurationRequirementBoolean;
 import de.metanome.algorithm_integration.configuration.ConfigurationRequirementInteger;
 import de.metanome.algorithm_integration.configuration.ConfigurationRequirementRelationalInput;
 import de.metanome.algorithm_integration.configuration.ConfigurationRequirementString;
@@ -50,6 +51,7 @@ import de.metanome.algorithms.cfdfinder.result.DirectOutputResultStrategy;
 import de.metanome.algorithms.cfdfinder.result.FileResultStrategy;
 import de.metanome.algorithms.cfdfinder.result.PruningLatticeResultStrategy;
 import de.metanome.algorithms.cfdfinder.result.PruningLatticeToFileResultStrategy;
+import de.metanome.algorithms.cfdfinder.result.PruningTreeResultStrategy;
 import de.metanome.algorithms.cfdfinder.result.Result;
 import de.metanome.algorithms.cfdfinder.result.ResultStrategy;
 import de.metanome.algorithms.cfdfinder.structures.FDTreeElement;
@@ -64,7 +66,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, StringParameterAlgorithm, BooleanParameterAlgorithm, IntegerParameterAlgorithm, RelationalInputParameterAlgorithm {
 
 	public enum Identifier {
-		INPUT_GENERATOR, NULL_EQUALS_NULL, VALIDATE_PARALLEL, ENABLE_MEMORY_GUARDIAN, MAX_DETERMINANT_SIZE, INPUT_ROW_LIMIT,
+		INPUT_GENERATOR, NULL_EQUALS_NULL, VALIDATE_PARALLEL, ENABLE_MEMORY_GUARDIAN, MAX_LHS_SIZE, INPUT_ROW_LIMIT,
 		RESULT_STRATEGY, PRUNING_STRATEGY, EXPANSION_STRATEGY, MIN_SUPPORT, MIN_CONFIDENCE, MAX_PATTERNS, MIN_SUPPORT_GAIN,
 		MAX_SUPPORT_DROP, RHS_FILTER, RESULT_FILE_NAME, MAX_G1
 	}
@@ -108,7 +110,7 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 	private int patternThreshold = Integer.MAX_VALUE;
 	private double minSupportGain = 0.2;
 	private double maxLevelSupportDrop = 0.0;
-	private int rhsFilter = 0;
+	private Integer[] rhsFilter = {0};
 	private double maxG1 = 0.01;
 	private String resultFileName = null;
 
@@ -178,6 +180,35 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 		maxSupportDrop.setRequired(false);
 		configs.add(maxSupportDrop);
 
+		ConfigurationRequirementString maxG1 = new ConfigurationRequirementString(Identifier.MAX_G1.name());
+		String[] defaultMaxG1 = {String.valueOf(this.maxG1)};
+		maxG1.setDefaultValues(defaultMaxG1);
+		maxG1.setRequired(false);
+		configs.add(maxG1);
+
+		ConfigurationRequirementInteger rhsFilter = new ConfigurationRequirementInteger(Identifier.RHS_FILTER.name());
+		Integer[] defaultRhsFilter = this.rhsFilter;
+		rhsFilter.setDefaultValues(defaultRhsFilter);
+		rhsFilter.setRequired(false);
+		configs.add(rhsFilter);
+
+		ConfigurationRequirementInteger maxLhsSize = new ConfigurationRequirementInteger(Identifier.MAX_LHS_SIZE.name());
+		Integer[] defaultMaxLhsSize = {Integer.valueOf(this.maxLhsSize)};
+		maxLhsSize.setDefaultValues(defaultMaxLhsSize);
+		maxLhsSize.setRequired(false);
+		configs.add(maxLhsSize);
+
+		ConfigurationRequirementString resultFileName = new ConfigurationRequirementString(CFDFinder.Identifier.RESULT_FILE_NAME.name());
+		resultFileName.setDefaultValues(new String[] {this.resultFileName});
+		resultFileName.setRequired(false);
+		configs.add(resultFileName);
+
+		ConfigurationRequirementBoolean nullEqualNull = new ConfigurationRequirementBoolean(Identifier.NULL_EQUALS_NULL.name());
+		Boolean[] defaultNullEqualNull = {true};
+		nullEqualNull.setDefaultValues(defaultNullEqualNull);
+		nullEqualNull.setRequired(false);
+		configs.add(nullEqualNull);
+
 		return configs;
 	}
 
@@ -227,7 +258,7 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 	@Override
 	public void setIntegerConfigurationValue(String identifier, Integer... values) throws AlgorithmConfigurationException {
 		int value = values[0].intValue();
-		if (CFDFinder.Identifier.MAX_DETERMINANT_SIZE.name().equals(identifier)) {
+		if (CFDFinder.Identifier.MAX_LHS_SIZE.name().equals(identifier)) {
 			this.maxLhsSize = value;
 		} else if (CFDFinder.Identifier.INPUT_ROW_LIMIT.name().equals(identifier)) {
 			if (values.length > 0) {
@@ -236,7 +267,7 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 		} else if (Identifier.MAX_PATTERNS.name().equals(identifier)) {
 			this.patternThreshold = value;
 		} else if (Identifier.RHS_FILTER.name().equals(identifier)) {
-			this.rhsFilter = value;
+			this.rhsFilter = values;
 		} else {
 			this.handleUnknownConfiguration(identifier, CollectionUtils.concat(values, ","));
 		}
@@ -442,11 +473,12 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 				.append("; [0.0..1.0] maxLevelSupportDrop=").append(maxLevelSupportDrop)
 				.append("; [0.0..1.0] minConfidence=").append(minConfidence);
 		} else if (RhsFilterPruning.getIdentifier().equals(this.pruningStrategyName)) {
-			oracle = new RhsFilterPruning(patternThreshold, minSupportGain, maxLevelSupportDrop, rhsFilter);
+			oracle = new RhsFilterPruning(patternThreshold, minSupportGain, maxLevelSupportDrop, rhsFilter, minConfidence);
 			ps.append(" ([int] patternThreshold=").append(patternThreshold)
 				.append("; [1..numberOfTuples] minSupportGain=").append(minSupportGain)
 				.append("; [0.0..1.0] maxLevelSupportDrop=").append(maxLevelSupportDrop)
-				.append("; [column id] rhsFilter=").append(rhsFilter);
+				.append("; [column id] rhsFilter=").append(rhsFilter.toString())
+				.append("; [0.0..1.0] minConfidence=").append(minConfidence);
 		} else if (PartialFdPruning.getIdentifier().equals(this.pruningStrategyName)) {
 			oracle = new PartialFdPruning(numRecords, maxG1, invertedPlis);
 			ps.append(" ([0..1] maxG1=").append(maxG1);
@@ -470,6 +502,8 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 			resultStrategy = new PruningLatticeToFileResultStrategy(this.resultReceiver, buildColumnIdentifiers(), resultFileName);
 		} else if (FileResultStrategy.getIdentifier().equals(this.resultStrategyName)) {
 			resultStrategy = new FileResultStrategy(this.resultReceiver, buildColumnIdentifiers(), resultFileName);
+		} else if (PruningTreeResultStrategy.getIdentifier().equals(this.resultStrategyName)) {
+			resultStrategy = new PruningTreeResultStrategy(this.resultReceiver, buildColumnIdentifiers(), resultFileName);
 		}
 		log("\tResult Strategy: " + resultStrategy.getClass().getName());
 
