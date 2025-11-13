@@ -104,7 +104,7 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 	private int fullHits = 0;
 	private int totalMisses = 0;
 
-	private String resultStrategyName = PruningLatticeResultStrategy.getIdentifier();
+	private String resultStrategyName = FileResultStrategy.getIdentifier();
 	private String pruningStrategyName = SupportIndependentPruning.getIdentifier();
 	private String expansionStrategyName = ConstantPatternExpansionStrategy.getIdentifier();
 
@@ -217,6 +217,18 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 		debugMode.setDefaultValues(defaultDebugMode);
 		debugMode.setRequired(false);
 		configs.add(debugMode);
+
+		ConfigurationRequirementBoolean memoryGuardianActive = new ConfigurationRequirementBoolean(Identifier.ENABLE_MEMORY_GUARDIAN.name());
+		Boolean[] defaultMemoryGuardianActive = {true};
+		memoryGuardianActive.setDefaultValues(defaultMemoryGuardianActive);
+		memoryGuardianActive.setRequired(false);
+		configs.add(memoryGuardianActive);
+
+		ConfigurationRequirementBoolean validateParallel = new ConfigurationRequirementBoolean(Identifier.VALIDATE_PARALLEL.name());
+		Boolean[] defaultValidateParallel = {true};
+		validateParallel.setDefaultValues(defaultValidateParallel);
+		validateParallel.setRequired(false);
+		configs.add(validateParallel);
 
 		return configs;
 	}
