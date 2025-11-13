@@ -115,46 +115,6 @@
     </dependencyManagement>
 
     <modules>
-        <module>utils</module>
-        <module>dao</module>
-        <module>BINDER</module>
-        <module>SPIDER</module>
-        <module>HyUCC</module>
-        <module>HyFD</module>
-	    <module>dcfinder</module>
-        <module>HyMD</module>
-        <module>SCDP</module>
-        <module>AIDFD</module>
-        <module>FAIDA</module>
-        <module>hydra</module>
-        <module>MANY</module>
-        <module>MvdDet</module>
         <module>CFDFinder</module>
-        <module>ducc</module>
-        <module>dcucc</module>
-        <module>dfd</module>
-        <module>tane</module>
-        <module>fun</module>
-        <module>fdmine</module>
-        <module>depminer</module>
-        <module>fastfds</module>
-        <module>fdep</module>
-        <module>ORDER</module>
-        <module>DVA</module>
-        <module>DVAKMV</module>
-        <module>DVAMS</module>
-        <module>DVBJKST</module>
-        <module>DVBloomFilter</module>
-        <module>DVFM</module>
-        <module>DVHyperLogLog</module>
-        <module>DVHyperLogLogPlus</module>
-        <module>DVLC</module>
-        <module>DVLogLog</module>
-        <module>DVMinCount</module>
-        <module>DVPCSA</module>
-        <module>DVSuperLogLog</module>
-        <module>Normalize</module>
-        <module>tireless</module>
-        <module>cody</module>
     </modules>
 </project>
