@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.LinkedHashSet;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 import de.metanome.algorithm_integration.AlgorithmConfigurationException;
@@ -42,6 +44,7 @@ import de.metanome.algorithms.cfdfinder.expansion.PositiveAndNegativeConstantPat
 import de.metanome.algorithms.cfdfinder.expansion.RangePatternExpansionStrategy;
 import de.metanome.algorithms.cfdfinder.pattern.Pattern;
 import de.metanome.algorithms.cfdfinder.pattern.PatternTableau;
+import de.metanome.algorithms.cfdfinder.pattern.PatternDebugController;
 import de.metanome.algorithms.cfdfinder.pruning.LegacyPruning;
 import de.metanome.algorithms.cfdfinder.pruning.PartialFdPruning;
 import de.metanome.algorithms.cfdfinder.pruning.PruningStrategy;
@@ -68,7 +71,7 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 	public enum Identifier {
 		INPUT_GENERATOR, NULL_EQUALS_NULL, VALIDATE_PARALLEL, ENABLE_MEMORY_GUARDIAN, MAX_LHS_SIZE, INPUT_ROW_LIMIT,
 		RESULT_STRATEGY, PRUNING_STRATEGY, EXPANSION_STRATEGY, MIN_SUPPORT, MIN_CONFIDENCE, MAX_PATTERNS, MIN_SUPPORT_GAIN,
-		MAX_SUPPORT_DROP, RHS_FILTER, RESULT_FILE_NAME, MAX_G1
+		MAX_SUPPORT_DROP, RHS_FILTER, RESULT_FILE_NAME, MAX_G1, DEBUG_MODE
 	}
 
 	/*
@@ -209,6 +212,12 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 		nullEqualNull.setRequired(false);
 		configs.add(nullEqualNull);
 
+		ConfigurationRequirementBoolean debugMode = new ConfigurationRequirementBoolean(Identifier.DEBUG_MODE.name());
+		Boolean[] defaultDebugMode = {false};
+		debugMode.setDefaultValues(defaultDebugMode);
+		debugMode.setRequired(false);
+		configs.add(debugMode);
+
 		return configs;
 	}
 
@@ -226,6 +235,8 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 			this.validateParallel = value;
 		else if (CFDFinder.Identifier.ENABLE_MEMORY_GUARDIAN.name().equals(identifier))
 			this.memoryGuardian.setActive(value);
+		else if (CFDFinder.Identifier.DEBUG_MODE.name().equals(identifier))
+			PatternDebugController.setDebugEnabled(value);
 		else
 			this.handleUnknownConfiguration(identifier, CollectionUtils.concat(values, ","));
 	}
@@ -432,7 +443,7 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 
 		List<Set<FDTreeElement.InternalFunctionalDependency>> levels = new ArrayList<>();
 		for (int i = 0; i < numAttributes - 1; i += 1) {
-			levels.add(new HashSet<FDTreeElement.InternalFunctionalDependency>());
+			levels.add(new TreeSet<FDTreeElement.InternalFunctionalDependency>());
 		}
 		for (FDTreeElement.InternalFunctionalDependency candidate : candidates) {
 			levels.get(candidate.lhs.cardinality() - 1).add(candidate);
@@ -611,14 +622,19 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 		return cluster.size() - 1;
 	}
 
-	private PatternTableau generateTableau(final BitSet attributes, final int[][] values, final PositionListIndex lhs, final int[] rhs, final int numberOfTuples, final PruningStrategy pruningStrategy, final ExpansionStrategy expansionStrategy) {
+	private PatternTableau generateTableau(final BitSet attributes, final int[][] values, final PositionListIndex lhs,
+			final int[] rhs, final int numberOfTuples, final PruningStrategy pruningStrategy,
+			final ExpansionStrategy expansionStrategy) {
+		PatternDebugController.resetCounter();
 		Pattern nullPattern = expansionStrategy.generateNullPattern(attributes);
 		int violations = 0;
 		List<IntArrayList> enrichedClusters = enrichPLI(lhs, numberOfTuples);
+		List<IntArrayList> nullCover = new LinkedList<IntArrayList>();
 		for (IntArrayList cluster : enrichedClusters) {
-			nullPattern.getCover().add(cluster.clone());
+			nullCover.add(cluster.clone());
 			violations += findViolationsFor(cluster, rhs);
 		}
+		nullPattern.setCover(nullCover);
 		nullPattern.setNumKeepers(numberOfTuples - violations);
 
 		PriorityQueue<Pattern> frontier = new PriorityQueue<>();
@@ -626,7 +642,7 @@ public class CFDFinder implements ConditionalFunctionalDependencyAlgorithm, Stri
 		nullPattern.setSupport(nullPattern.getNumCover());
 		frontier.add(nullPattern);
 
-		Set<Pattern> T = new HashSet<>();
+		Set<Pattern> T = new LinkedHashSet<>();
 
 		while (!frontier.isEmpty() && !pruningStrategy.hasEnoughPatterns(T)) {
 			Pattern currentPattern = frontier.poll();

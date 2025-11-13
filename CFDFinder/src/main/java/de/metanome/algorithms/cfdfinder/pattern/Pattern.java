@@ -1,19 +1,20 @@
 package de.metanome.algorithms.cfdfinder.pattern;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
 import com.google.common.base.Joiner;
+
 import de.metanome.algorithms.cfdfinder.CFDFinder;
 import it.unimi.dsi.fastutil.ints.Int2ReferenceArrayMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 
 public class Pattern implements Comparable<Pattern> {
-
     private Int2ReferenceArrayMap<PatternEntry> attributes;
     private int[] ids;
 
@@ -21,11 +22,15 @@ public class Pattern implements Comparable<Pattern> {
     private float support;
     private List<IntArrayList> cover = new ArrayList<>();
     private int numKeepers;
+    private long debugNumber;
 
     private static int[] primes = new int[] {2, 19, 29, 41, 59, 79, 101, 129, 151, 173, 197};
 
     public Pattern(Map<Integer, PatternEntry> attributes) {
         setAttributes(attributes);
+        if (PatternDebugController.isDebugEnabled()) {
+            this.debugNumber = PatternDebugController.next();
+        }
     }
 
     public boolean matches(int[] tuple) {
@@ -112,8 +117,8 @@ public class Pattern implements Comparable<Pattern> {
         this.support = support;
     }
 
-    public float getConfidence() {
-        return getNumCover() == 0 ? 0 : (float) getNumKeepers() / getNumCover();
+    public double getConfidence() {
+        return getNumCover() == 0 ? 0 : (double) getNumKeepers() / getNumCover();
     }
 
     public List<IntArrayList> getCover() {
@@ -122,6 +127,18 @@ public class Pattern implements Comparable<Pattern> {
 
     public void setCover(List<IntArrayList> cover) {
         this.cover = cover;
+
+        if (cover != null && PatternDebugController.isDebugEnabled()) {
+            for (IntArrayList cluster : this.cover) {
+                cluster.sort(null);
+            }
+            this.cover.sort((a, b) -> {
+                if (a.isEmpty() && b.isEmpty()) return 0;
+                if (a.isEmpty()) return -1;
+                if (b.isEmpty()) return 1;
+                return Integer.compare(a.getInt(0), b.getInt(0));
+            });
+        }
     }
 
     public int getNumKeepers() {
@@ -155,6 +172,20 @@ public class Pattern implements Comparable<Pattern> {
         }
         this.getCover().removeAll(clustersToRemove);
 
+        if (PatternDebugController.isDebugEnabled()) {
+            for (IntArrayList cluster : this.cover) {
+                cluster.sort(null);
+            }
+            this.cover.sort((a, b) -> {
+                if (a.isEmpty() && b.isEmpty())
+                    return 0;
+                if (a.isEmpty())
+                    return -1;
+                if (b.isEmpty())
+                    return 1;
+                return Integer.compare(a.getInt(0), b.getInt(0));
+            });
+        }
         int globalCount = 0;
         for (IntArrayList cluster : this.getCover()) {
             globalCount += cluster.size();
@@ -188,10 +219,18 @@ public class Pattern implements Comparable<Pattern> {
 
     @Override
     public int compareTo(Pattern other) {
-        int supportMeasure = (int) (other.support - this.support);
-        if (supportMeasure == 0) {
-            return other.numKeepers - this.numKeepers;
+        int supportMeasure = (int)(other.support - this.support);
+        if (supportMeasure != 0) {
+            return supportMeasure;
         }
-        return supportMeasure;
+        
+        if (PatternDebugController.isDebugEnabled()) {
+            if (other.numKeepers != this.numKeepers) {
+                return other.numKeepers - this.numKeepers;
+            }
+            return Long.compare(other.debugNumber, this.debugNumber);
+        }
+        
+        return other.numKeepers - this.numKeepers;
     }
 }

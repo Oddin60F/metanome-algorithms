@@ -103,7 +103,7 @@ public class Result {
                     values.add(s);
                 }
             }
-            builder.append(Joiner.on(",").join(values));
+            builder.append(Joiner.on("|").join(values));
             builder.append(")");
             second = true;
         }

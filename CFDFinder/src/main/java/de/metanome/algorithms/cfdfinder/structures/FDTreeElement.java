@@ -626,7 +626,7 @@ public class FDTreeElement {
 		return numFDs;
 	}
 
-	public static class InternalFunctionalDependency {
+	public static class InternalFunctionalDependency implements Comparable<InternalFunctionalDependency>{
 		public BitSet lhs;
 		public int rhs;
 		public int numAttributes;
@@ -656,6 +656,25 @@ public class FDTreeElement {
 			return lhs != null ? lhs.equals(that.lhs) : that.lhs == null;
 		}
 
+		@Override
+		public int compareTo(InternalFunctionalDependency other) {
+			if (rhs != other.rhs) {
+				return Integer.compare(rhs, other.rhs);
+			}
+
+			long[] thisLongs = this.lhs.toLongArray();
+			long[] otherLongs = other.lhs.toLongArray();
+
+			int minLength = Math.min(thisLongs.length, otherLongs.length);
+			for (int i = 0; i < minLength; i++) {
+				int compareResult = Long.compare(thisLongs[i], otherLongs[i]);
+				if (compareResult != 0) {
+					return compareResult;
+				}
+			}
+
+			return Integer.compare(thisLongs.length, otherLongs.length);
+		}
 		@Override
 		public int hashCode() {
 			int result = lhs != null ? lhs.hashCode() : 0;
