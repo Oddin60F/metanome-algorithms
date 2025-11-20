@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import com.google.common.base.Joiner;
 
@@ -92,8 +93,10 @@ public class Pattern implements Comparable<Pattern> {
         this.patternEntries = new PatternEntry[attributes.size()];
         this.ids = new int[attributes.size()];
 
+        Map<Integer, PatternEntry> sorted = new TreeMap<>(attributes);
+
         int index = 0;
-        for (Map.Entry<Integer, PatternEntry> entry : attributes.entrySet()) {
+        for (Map.Entry<Integer, PatternEntry> entry : sorted.entrySet()) {
             this.attributes.put(entry.getKey().intValue(), entry.getValue());
             this.ids[index] = entry.getKey().intValue();
             this.patternEntries[index] = entry.getValue();
