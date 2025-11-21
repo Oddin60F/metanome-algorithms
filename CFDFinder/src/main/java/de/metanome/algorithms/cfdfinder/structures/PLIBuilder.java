@@ -17,6 +17,7 @@
 package de.metanome.algorithms.cfdfinder.structures;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
@@ -88,7 +89,7 @@ public class PLIBuilder {
 			for (IntArrayList cluster : clusterMap.values())
 				if (cluster.size() > 1)
 					clusters.add(cluster);
-			
+			clusters.sort(Comparator.comparingInt(a -> a.getInt(0)));
 			clustersPerAttribute.add(new PositionListIndex(columnId, clusters));
 		}
 		return clustersPerAttribute;
